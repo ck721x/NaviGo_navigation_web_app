@@ -1,0 +1,53 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject Mapbox Token
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          if [ -z "$MAPBOX_TOKEN" ]; then
+            echo "::error::MAPBOX_TOKEN secret is not configured."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          config = {"mapboxToken": os.environ["MAPBOX_TOKEN"]}
+          Path("config.js").write_text(
+              f"window.APP_CONFIG = {json.dumps(config)};\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
