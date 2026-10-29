@@ -9,6 +9,10 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   deploy:
     environment:
@@ -20,33 +24,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Inject Mapbox Token
-        env:
-          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
         run: |
-          if [ -z "$MAPBOX_TOKEN" ]; then
-            echo "::error::MAPBOX_TOKEN secret is not configured."
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          config = {"mapboxToken": os.environ["MAPBOX_TOKEN"]}
-          Path("config.js").write_text(
-              f"window.APP_CONFIG = {json.dumps(config)};\n",
-              encoding="utf-8",
-          )
-          PY
+          echo "window.APP_CONFIG = { mapboxToken: '${{ secrets.MAPBOX_TOKEN }}' };" > config.js
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "."
+          path: '.'
 
       - name: Deploy to GitHub Pages
         id: deployment
