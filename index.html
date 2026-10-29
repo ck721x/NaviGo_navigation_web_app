@@ -24,18 +24,23 @@
     .app.dark .logo span { color: #e1e5ec; }
 
     /* Search Box & Autocomplete */
-    .search-container { flex: 1; max-width: 550px; margin-left: 8px; position: relative; }
-    .search-box { display: flex; gap: 8px; }
+    .search-container { flex: 1; max-width: 580px; margin-left: 8px; position: relative; }
+    .search-box { display: flex; gap: 8px; align-items: center; }
     .search-box input { flex: 1; padding: 12px 18px; border-radius: 40px; border: 1px solid #e1e5ec; background: #f9fafc; font-size: 0.95rem; outline: none; transition: 0.2s; }
     .app.dark .search-box input { background: #2c3038; border-color: #3a3f4a; color: #e1e5ec; }
     .search-box input:focus { border-color: #1a73e8; background: #fff; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1); }
     .app.dark .search-box input:focus { background: #2c3038; }
-    .search-box button { padding: 0 24px; border-radius: 40px; border: none; background: #1a73e8; color: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    
+    /* Country IP Badge */
+    .country-badge { display: none; align-items: center; justify-content: center; padding: 0 14px; height: 44px; background: #f1f3f4; border: 1px solid #e1e5ec; border-radius: 22px; font-size: 0.85rem; font-weight: 700; color: #5f6c80; white-space: nowrap; transition: 0.2s; }
+    .app.dark .country-badge { background: #2c3038; border-color: #3a3f4a; color: #a0aab8; }
+
+    .search-box button { padding: 0 24px; height: 44px; border-radius: 40px; border: none; background: #1a73e8; color: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
     .search-box button:hover:not(:disabled) { background: #0d5bbf; }
     .search-box button:disabled { opacity: 0.65; cursor: progress; }
 
     /* Autocomplete Dropdown */
-    .autocomplete-list { position: absolute; top: calc(100% + 5px); left: 0; width: calc(100% - 110px); background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 2000; max-height: 300px; overflow-y: auto; display: none; border: 1px solid #eef1f5; }
+    .autocomplete-list { position: absolute; top: calc(100% + 5px); left: 0; width: 100%; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 2000; max-height: 300px; overflow-y: auto; display: none; border: 1px solid #eef1f5; }
     .app.dark .autocomplete-list { background: #2c3038; border-color: #3a3f4a; }
     .autocomplete-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f3f7; display: flex; flex-direction: column; }
     .app.dark .autocomplete-item { border-bottom-color: #3a3f4a; }
@@ -128,7 +133,6 @@
       .top-bar { flex-wrap: wrap; gap: 8px; }
       .logo { font-size: 1.2rem; }
       .map-tools { top: 8px; right: 8px; }
-      .autocomplete-list { width: 100%; }
     }
   </style>
 </head>
@@ -143,6 +147,7 @@
       <div class="search-container">
         <div class="search-box">
           <input type="text" id="searchInput" placeholder="Search for an address or landmark…" autocomplete="off" />
+          <div id="countryBadge" class="country-badge" title="Detected country code from IP">--</div>
           <button id="searchBtn"><i class="fas fa-route"></i> <span>Route</span></button>
         </div>
         <div class="autocomplete-list" id="autocompleteList"></div>
@@ -295,6 +300,7 @@
       const routeTimeEl = document.getElementById('routeTime');
       const searchInput = document.getElementById('searchInput');
       const searchBtn = document.getElementById('searchBtn');
+      const countryBadge = document.getElementById('countryBadge');
       const toastEl = document.getElementById('toast');
       const toggleTollsEl = document.getElementById('toggleTolls');
       const prefFastest = document.getElementById('prefFastest');
@@ -429,7 +435,7 @@
          ROUTING
          ============================================================ */
       function showStraightLineFallback(startLatLng, destLatLng, km, reason, destName) {
-        if (straightKm > 1000) {
+        if (km > 1000) {
           renderRouteError('too-far', destName);
           return;
         }
@@ -519,7 +525,7 @@
       }
 
       /* ============================================================
-         LOCATION: GPS + IP FALLBACK (With Country Extraction)
+         LOCATION: GPS + IP FALLBACK (With Country Badge Update)
          ============================================================ */
       async function initializeLocation() {
         let ipData = null;
@@ -530,6 +536,10 @@
             ipData = await res.json();
             if (ipData && ipData.country_code) {
               userCountryCode = ipData.country_code.toLowerCase(); // e.g., 'my'
+              if (countryBadge) {
+                countryBadge.textContent = ipData.country_code.toUpperCase();
+                countryBadge.style.display = 'flex';
+              }
             }
           }
         } catch (e) { console.warn("IP lookup failed", e); }
@@ -597,10 +607,9 @@
             if (res.ok) {
               const data = await res.json();
               results = data.features.map(f => {
-                // Extract detailed address parts
                 let title = f.text;
-                if (f.address) title = `${f.address} ${f.text}`; // e.g. "Block 5 KFC"
-                let subtitle = f.place_name.replace(title, '').replace(/^,\s*/, ''); // e.g. "Jasin, Melaka, 77000, Malaysia"
+                if (f.address) title = `${f.address} ${f.text}`;
+                let subtitle = f.place_name.replace(title, '').replace(/^,\s*/, '');
                 
                 return {
                   name: title,
@@ -622,7 +631,6 @@
               const data = await res.json();
               results = data.features.map(f => {
                 let title = f.properties.name || f.properties.street || query;
-                // Combine available address parts
                 let parts = [
                   f.properties.housenumber,
                   f.properties.street,
