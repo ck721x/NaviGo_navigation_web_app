@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NaviGo · web navigation</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@tomickigrzegorz/leaflet-rotate/dist/leaflet-rotate.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1e1f22; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .app { display: flex; flex-direction: column; height: 100vh; width: 100vw; background: #f5f7fb; transition: background 0.2s; }
+    .app.dark { background: #121417; }
+
+    /* ---------- TOP BAR ---------- */
+    .top-bar { background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08); padding: 12px 20px; display: flex; align-items: center; gap: 16px; z-index: 1000; position: relative; transition: background 0.2s, box-shadow 0.2s; }
+    .app.dark .top-bar { background: #1e2126; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.4rem; color: #1a73e8; letter-spacing: -0.5px; flex-shrink: 0; }
+    .logo span { color: #2d2f33; }
+    .app.dark .logo span { color: #e1e5ec; }
+
+    .search-box { flex: 1; display: flex; gap: 8px; max-width: 550px; margin-left: 8px; }
+    .search-box input { flex: 1; padding: 12px 18px; border-radius: 40px; border: 1px solid #e1e5ec; background: #f9fafc; font-size: 0.95rem; outline: none; transition: 0.2s; }
+    .app.dark .search-box input { background: #2c3038; border-color: #3a3f4a; color: #e1e5ec; }
+    .search-box input:focus { border-color: #1a73e8; background: #fff; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1); }
+    .app.dark .search-box input:focus { background: #2c3038; }
+    .search-box button { padding: 0 24px; border-radius: 40px; border: none; background: #1a73e8; color: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .search-box button:hover:not(:disabled) { background: #0d5bbf; }
+    .search-box button:disabled { opacity: 0.65; cursor: progress; }
+
+    /* ---------- MAP ---------- */
+    .main-panel { flex: 1; display: flex; position: relative; overflow: hidden; }
+    #map { flex: 1; height: 100%; width: 100%; z-index: 1; background: #d9e2ec; transition: transform 0.4s ease, filter 0.3s ease; transform-origin: center center; }
+    #map.tilted { transform: perspective(1200px) rotateX(28deg) scale(0.92); filter: drop-shadow(0 20px 30px rgba(0,0,0,0.25)); border-radius: 12px; }
+
+    /* ---------- SIDEBAR (MOVED TO LEFT) ---------- */
+    .sidebar { width: 360px; background: #fff; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.06); display: flex; flex-direction: column; z-index: 2; overflow-y: auto; border-right: 1px solid #eef1f5; transition: background 0.2s, border-color 0.2s; order: -1; }
+    .app.dark .sidebar { background: #1e2126; border-right-color: #2c3038; }
+
+    .route-header { padding: 18px 20px 12px; border-bottom: 1px solid #eef1f5; }
+    .app.dark .route-header { border-bottom-color: #2c3038; }
+    .route-header h2 { font-size: 1.1rem; font-weight: 600; color: #1e2a3a; display: flex; align-items: center; gap: 8px; }
+    .app.dark .route-header h2 { color: #e1e5ec; }
+
+    .route-stats { display: flex; gap: 16px; margin-top: 8px; font-size: 0.9rem; color: #5f6c80; flex-wrap: wrap; }
+    .app.dark .route-stats { color: #a0aab8; }
+    .route-stats i { margin-right: 4px; color: #1a73e8; }
+
+    /* IP status banner */
+    .ip-status { margin: 12px 20px 4px; padding: 10px 12px; background: #e8f0fe; border: 1px solid #c6dafc; border-radius: 10px; font-size: 0.78rem; color: #1a5fb4; line-height: 1.45; display: flex; align-items: center; gap: 8px; }
+    .ip-status .spinner { width: 14px; height: 14px; border: 2px solid #c6dafc; border-top-color: #1a73e8; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ip-status.ok { background: #e6f4ea; border-color: #b7e1cd; color: #137333; }
+    .ip-status.fail { background: #fce8e6; border-color: #f5c6c2; color: #c5221f; }
+    .app.dark .ip-status.ok { background: #1e3a2a; border-color: #2d5a3a; color: #7ee2a8; }
+    .app.dark .ip-status.fail { background: #3a1e1e; border-color: #5a2d2d; color: #f28b82; }
+    .app.dark .ip-status:not(.ok):not(.fail) { background: #1e2a3a; border-color: #2c3f5a; color: #8ab4f8; }
+
+    /* Route preferences */
+    .route-prefs { display: flex; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #eef1f5; align-items: center; flex-wrap: wrap; }
+    .app.dark .route-prefs { border-bottom-color: #2c3038; }
+    .pref-group { display: flex; background: #f1f4f9; border-radius: 8px; overflow: hidden; }
+    .app.dark .pref-group { background: #2c3038; }
+    .pref-btn { border: none; background: transparent; padding: 7px 14px; font-size: 0.8rem; font-weight: 500; color: #5f6c80; cursor: pointer; transition: 0.15s; white-space: nowrap; }
+    .app.dark .pref-btn { color: #a0aab8; }
+    .pref-btn.active { background: #1a73e8; color: #fff; }
+    .pref-btn:not(.active):hover { background: #e1e8f5; }
+    .app.dark .pref-btn:not(.active):hover { background: #3a3f4a; }
+
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 500; color: #5f6c80; }
+    .app.dark .toggle-wrap { color: #a0aab8; }
+    .toggle { position: relative; width: 38px; height: 22px; background: #cdd6e3; border-radius: 20px; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+    .app.dark .toggle { background: #3a3f4a; }
+    .toggle.on { background: #1a73e8; }
+    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    .toggle.on::after { left: 19px; }
+
+    .directions-list { padding: 8px 0; flex: 1; }
+    .direction-step { padding: 14px 20px; display: flex; gap: 14px; border-bottom: 1px solid #f0f3f7; align-items: flex-start; }
+    .app.dark .direction-step { border-bottom-color: #2c3038; }
+    .direction-step:hover { background: #f8faff; }
+    .app.dark .direction-step:hover { background: #252a32; }
+
+    .step-icon { width: 36px; height: 36px; background: #e9eef6; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-size: 1.1rem; flex-shrink: 0; }
+    .app.dark .step-icon { background: #2c3038; }
+    .step-content { flex: 1; min-width: 0; }
+    .step-instruction { font-weight: 500; color: #1e2a3a; font-size: 0.95rem; display: flex; justify-content: space-between; gap: 8px; }
+    .app.dark .step-instruction { color: #e1e5ec; }
+    .step-distance { font-size: 0.8rem; color: #7a8798; font-weight: 400; white-space: nowrap; }
+    .app.dark .step-distance { color: #8896a8; }
+    .step-detail { font-size: 0.8rem; color: #7a8798; margin-top: 4px; display: flex; gap: 12px; }
+    .app.dark .step-detail { color: #8896a8; }
+
+    /* ---------- BOTTOM BAR ---------- */
+    .bottom-bar { background: #fff; border-top: 1px solid #eef1f5; padding: 10px 20px; display: flex; align-items: center; gap: 18px; font-size: 0.85rem; z-index: 1000; box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.02); flex-wrap: wrap; transition: background 0.2s, border-color 0.2s; }
+    .app.dark .bottom-bar { background: #1e2126; border-top-color: #2c3038; }
+    .alert-badge { display: flex; align-items: center; gap: 8px; background: #fff2e5; color: #c7511f; padding: 6px 14px; border-radius: 30px; font-weight: 500; border: 1px solid #ffd9b3; }
+    .app.dark .alert-badge { background: #3a2e1f; border-color: #5a4a2f; color: #ffb27a; }
+    .traffic-indicator { display: flex; align-items: center; gap: 10px; margin-left: auto; color: #2d3b4e; }
+    .app.dark .traffic-indicator { color: #a0aab8; }
+    .traffic-dot { width: 10px; height: 10px; border-radius: 50%; background: #34a853; box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.15); }
+
+    /* ---------- TOAST ---------- */
+    .toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1e2a3a; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 500; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); opacity: 0; pointer-events: none; transition: 0.25s; z-index: 5000; max-width: 90vw; }
+    .app.dark .toast { background: #2c3038; color: #e1e5ec; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.warn { background: #b3261e; }
+
+    /* ---------- LEAFLET OVERRIDES ---------- */
+    .leaflet-routing-container { display: none !important; }
+    .leaflet-control-zoom { border: none !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important; border-radius: 12px !important; overflow: hidden; margin-left: 10px !important; }
+    .leaflet-control-zoom a { background: #fff !important; color: #2d3b4e !important; font-weight: 600; width: 36px !important; height: 36px !important; line-height: 36px !important; }
+    .app.dark .leaflet-control-zoom a { background: #2c3038 !important; color: #e1e5ec !important; }
+    .leaflet-control-zoom a:hover { background: #f0f4fc !important; }
+    .app.dark .leaflet-control-zoom a:hover { background: #3a3f4a !important; }
+    .leaflet-control-attribution { font-size: 9px !important; background: rgba(255, 255, 255, 0.8) !important; border-radius: 0 20px 0 0; padding: 2px 8px !important; }
+    .app.dark .leaflet-control-attribution { background: rgba(30, 33, 38, 0.85) !important; color: #a0aab8; }
+    .app.dark .leaflet-control-attribution a { color: #6ea8fe; }
+
+    .map-tools { position: absolute; top: 12px; right: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+    .map-tool-btn { width: 40px; height: 40px; border-radius: 10px; border: none; background: #fff; color: #2d3b4e; font-size: 1rem; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: center; transition: 0.15s; }
+    .app.dark .map-tool-btn { background: #2c3038; color: #e1e5ec; }
+    .map-tool-btn:hover { background: #f0f4fc; transform: scale(1.05); }
+    .app.dark .map-tool-btn:hover { background: #3a3f4a; }
+    .map-tool-btn.active { background: #1a73e8; color: #fff; }
+
+    .leaflet-control-rotate-toggle { background: #fff !important; border-radius: 10px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.12) !important; border: none !important; }
+    .app.dark .leaflet-control-rotate-toggle { background: #2c3038 !important; }
+
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .search-box button span { display: none; }
+      .top-bar { flex-wrap: wrap; gap: 8px; }
+      .logo { font-size: 1.2rem; }
+      .map-tools { top: 8px; right: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="logo">
+        <i class="fas fa-map-marked-alt" style="font-size: 1.6rem;"></i>
+        <span>NaviGo</span>
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search for an address or landmark…" />
+        <button id="searchBtn"><i class="fas fa-route"></i> <span>Route</span></button>
+      </div>
+    </div>
+
+    <div class="main-panel">
+      <!-- SIDEBAR (Now on the left due to CSS flex order) -->
+      <div class="sidebar">
+        <div class="route-header">
+          <h2><i class="fas fa-directions" style="color: #1a73e8;"></i> Turn‑by‑turn</h2>
+          <div class="route-stats">
+            <span><i class="fas fa-road"></i> <span id="routeDistance">—</span></span>
+            <span><i class="fas fa-clock"></i> <span id="routeTime">—</span></span>
+          </div>
+        </div>
+
+        <!-- IP geolocation status -->
+        <div class="ip-status" id="ipStatus">
+          <div class="spinner"></div>
+          <span>Detecting your location from IP…</span>
+        </div>
+
+        <div class="route-prefs">
+          <div class="pref-group">
+            <button class="pref-btn active" id="prefFastest">Fastest</button>
+            <button class="pref-btn" id="prefShortest">Shortest</button>
+          </div>
+          <div class="toggle-wrap">
+            <span>Avoid tolls</span>
+            <div class="toggle" id="toggleTolls"></div>
+          </div>
+        </div>
+
+        <div class="directions-list" id="directionsList">
+          <div class="direction-step">
+            <div class="step-icon"><i class="fas fa-map-pin"></i></div>
+            <div class="step-content">
+              <div class="step-instruction">Search for a destination to begin</div>
+              <div class="step-detail">Landmarks in your country are prioritised.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAP -->
+      <div id="map"></div>
+
+      <!-- Floating Map Tools -->
+      <div class="map-tools">
+        <button class="map-tool-btn" id="btnCenter" title="Center to my location">
+          <i class="fas fa-crosshairs"></i>
+        </button>
+        <button class="map-tool-btn" id="btnNorth" title="Point north (reset bearing)">
+          <i class="fas fa-compass"></i>
+        </button>
+        <button class="map-tool-btn" id="btnTheme" title="Toggle dark / light mode">
+          <i class="fas fa-moon"></i>
+        </button>
+        <button class="map-tool-btn" id="btn3D" title="Toggle 3D perspective">
+          <i class="fas fa-cube"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR -->
+    <div class="bottom-bar">
+      <div class="alert-badge"><i class="fas fa-exclamation-triangle"></i> Police reported ahead</div>
+      <div class="alert-badge" style="background: #e6f0fe; color: #1a5fb4; border-color: #b8d4fe;">
+        <i class="fas fa-cloud-sun"></i> 18°C · Clear
+      </div>
+      <div class="traffic-indicator"><span class="traffic-dot"></span> Light traffic</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@tomickigrzegorz/leaflet-rotate/dist/leaflet-rotate.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ============================================================
+         CONFIG
+         ============================================================ */
+      const CONFIG = {
+        osrmServiceUrl: 'https://router.project-osrm.org/route/v1',
+        maxRouteDistanceKm: 1500,
+        geocodeCountryCodes: '',
+        fallbackLocation: { lat: 40.785091, lng: -73.968285 }, // Default fallback if IP fails
+
+        // Reliable CARTO tiles (bypasses OSM localhost blocking)
+        lightTiles: {
+          url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+        },
+        darkTiles: {
+          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+        }
+      };
+
+      /* ============================================================
+         MAP INITIALIZATION
+         ============================================================ */
+      const map = L.map('map', {
+        center: [CONFIG.fallbackLocation.lat, CONFIG.fallbackLocation.lng],
+        zoom: 13,
+        zoomControl: true,
+        fadeAnimation: true,
+        rotate: true,
+        bearing: 0,
+        dragRotate: false,
+        touchRotate: false,
+        shiftKeyRotate: false
+      });
+
+      let activeTileLayer = null;
+      function setTileLayer(theme) {
+        if (activeTileLayer) map.removeLayer(activeTileLayer);
+        const cfg = theme === 'dark' ? CONFIG.darkTiles : CONFIG.lightTiles;
+        activeTileLayer = L.tileLayer(cfg.url, {
+          attribution: cfg.attribution,
+          maxZoom: 19,
+          crossOrigin: true
+        }).addTo(map);
+      }
+      setTileLayer('light');
+
+      // Starting Marker
+      const currentMarker = L.marker([CONFIG.fallbackLocation.lat, CONFIG.fallbackLocation.lng], {
+        icon: L.divIcon({
+          className: 'current-location-icon',
+          html: '<div style="background:#1a73e8;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35)"></div>',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        })
+      }).addTo(map).bindPopup('Approximate location (from IP)');
+
+      /* ============================================================
+         DOM HELPERS
+         ============================================================ */
+      const appEl = document.getElementById('app');
+      const directionsList = document.getElementById('directionsList');
+      const routeDistanceEl = document.getElementById('routeDistance');
+      const routeTimeEl = document.getElementById('routeTime');
+      const searchInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('searchBtn');
+      const toastEl = document.getElementById('toast');
+      const toggleTollsEl = document.getElementById('toggleTolls');
+      const prefFastest = document.getElementById('prefFastest');
+      const prefShortest = document.getElementById('prefShortest');
+      const ipStatusEl = document.getElementById('ipStatus');
+
+      let toastTimer = null;
+      function showToast(message, kind) {
+        toastEl.textContent = message;
+        toastEl.className = 'toast show' + (kind === 'warn' ? ' warn' : '');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 4500);
+      }
+
+      function updateRouteStats(distanceMeters, timeSeconds) {
+        if (Number.isFinite(distanceMeters)) {
+          routeDistanceEl.textContent = distanceMeters >= 1000 ? (distanceMeters / 1000).toFixed(1) + ' km' : Math.round(distanceMeters) + ' m';
+        }
+        if (Number.isFinite(timeSeconds)) {
+          const mins = Math.max(1, Math.round(timeSeconds / 60));
+          routeTimeEl.textContent = mins >= 60 ? Math.floor(mins / 60) + ' h ' + (mins % 60) + ' min' : mins + ' min';
+        }
+      }
+
+      /* ============================================================
+         ROUTE STATE
+         ============================================================ */
+      let routingControl = null;
+      let fallbackLine = null;
+      let destMarker = null;
+      let routeMode = 'fastest';
+      let avoidTolls = false;
+
+      let userLocation = null;
+      let userCountryCode = '';
+      let userCountryName = '';
+
+      function clearRouteArtifacts() {
+        if (routingControl) { map.removeControl(routingControl); routingControl = null; }
+        if (fallbackLine) { map.removeLayer(fallbackLine); fallbackLine = null; }
+        if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
+      }
+
+      /* ============================================================
+         CUSTOM OSRM ROUTER
+         ============================================================ */
+      const OSRMWithTolls = L.Routing.OSRMv1.extend({
+        getUrl: function (waypoints) {
+          let url = L.Routing.OSRMv1.prototype.getUrl.call(this, waypoints);
+          if (this.options.avoidTolls) {
+            url += '&exclude=toll';
+          }
+          return url;
+        }
+      });
+
+      /* ============================================================
+         GEO / MATH UTILITIES
+         ============================================================ */
+      function haversineKm(a, b) {
+        const R = 6371;
+        const toRad = (d) => d * Math.PI / 180;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(s));
+      }
+
+      function formatStepDistance(meters) {
+        if (!Number.isFinite(meters) || meters <= 0) return 'arrive';
+        return meters >= 1000 ? (meters / 1000).toFixed(1) + ' km' : Math.round(meters) + ' m';
+      }
+
+      /* ============================================================
+         TURN-BY-TURN RENDERING
+         ============================================================ */
+      const ICON_BY_TYPE = {
+        Straight: 'fa-arrow-up', SlightRight: 'fa-arrow-up', Right: 'fa-arrow-right',
+        SharpRight: 'fa-arrow-right', TurnAround: 'fa-undo', SharpLeft: 'fa-arrow-left',
+        Left: 'fa-arrow-left', SlightLeft: 'fa-arrow-left', WaypointReached: 'fa-map-marker-alt',
+        DestinationReached: 'fa-flag-checkered'
+      };
+
+      function renderDirections(instructions) {
+        if (!instructions || instructions.length === 0) return;
+        const html = instructions.map((step, idx) => {
+          const isLast = idx === instructions.length - 1;
+          const icon = isLast ? 'fa-flag-checkered' : (ICON_BY_TYPE[step.type] || 'fa-arrow-up');
+          const detail = isLast ? 'Destination reached' : (step.road || step.direction || '—');
+          const dist = isLast ? '0 m' : formatStepDistance(step.distance);
+
+          return `
+            <div class="direction-step">
+              <div class="step-icon"><i class="fas ${icon}"></i></div>
+              <div class="step-content">
+                <div class="step-instruction">
+                  ${escapeHtml(step.text || 'Proceed')}
+                  <span class="step-distance">${dist}</span>
+                </div>
+                <div class="step-detail">
+                  <i class="fas ${isLast ? 'fa-map-pin' : 'fa-road'}"></i>
+                  ${escapeHtml(detail)}
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+        directionsList.innerHTML = html;
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+      }
+
+      function renderRouteError(reason, destName) {
+        const reasonText = reason === 'too-far'
+          ? 'The destination is too far away for the demo routing server to calculate a driving route.'
+          : 'The routing service did not respond or could not calculate a route.';
+
+        directionsList.innerHTML = `
+          <div class="direction-step">
+            <div class="step-icon" style="background:#fdecea;color:#c5221f;"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="step-content">
+              <div class="step-instruction">Turn‑by‑turn unavailable</div>
+              <div class="step-detail">${reasonText}</div>
+            </div>
+          </div>
+          <div class="direction-step">
+            <div class="step-icon"><i class="fas fa-flag-checkered"></i></div>
+            <div class="step-content">
+              <div class="step-instruction">${escapeHtml(destName)}</div>
+              <div class="step-detail"><i class="fas fa-map-pin"></i> Destination</div>
+            </div>
+          </div>`;
+      }
+
+      /* ============================================================
+         ROUTING
+         ============================================================ */
+      function showStraightLineFallback(startLatLng, destLatLng, km, reason, destName) {
+        fallbackLine = L.polyline([startLatLng, destLatLng], {
+          color: '#ea4335', weight: 5, opacity: 0.75, dashArray: '8 10'
+        }).addTo(map);
+        map.fitBounds(fallbackLine.getBounds(), { padding: [60, 60] });
+        const estSeconds = Math.max(60, (km / 50) * 3600);
+        updateRouteStats(km * 1000, estSeconds);
+        renderRouteError(reason, destName);
+      }
+
+      function calculateRoute(start, dest, destName) {
+        clearRouteArtifacts();
+
+        const startLatLng = L.latLng(start.lat, start.lng);
+        const destLatLng = L.latLng(dest.lat, dest.lng);
+        destName = destName || 'Destination';
+
+        destMarker = L.marker(destLatLng, {
+          icon: L.divIcon({
+            className: 'dest-icon',
+            html: '<div style="background:#ea4335;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35)"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 20]
+          })
+        }).addTo(map).bindPopup(`<b>${escapeHtml(destName)}</b><br>Destination`).openPopup();
+
+        const straightKm = haversineKm(start, dest);
+        if (straightKm > CONFIG.maxRouteDistanceKm) {
+          showStraightLineFallback(startLatLng, destLatLng, straightKm, 'too-far', destName);
+          showToast(`Destination is ~${Math.round(straightKm)} km away — beyond the demo server's range.`, 'warn');
+          return;
+        }
+
+        const router = new OSRMWithTolls({
+          serviceUrl: CONFIG.osrmServiceUrl,
+          profile: 'driving',
+          avoidTolls: avoidTolls
+        });
+
+        routingControl = L.Routing.control({
+          waypoints: [startLatLng, destLatLng],
+          router: router,
+          lineOptions: {
+            styles: [{ color: '#1a73e8', weight: 6, opacity: 0.85 }],
+            addWaypoints: false, extendToWaypoints: true, missingRouteTolerance: 0
+          },
+          show: false, addWaypoints: false, fitSelectedRoutes: true, routeWhileDragging: false,
+          showAlternatives: routeMode === 'shortest', autoRoute: true
+        }).addTo(map);
+
+        routingControl.on('routesfound', function (e) {
+          const routes = e.routes || [];
+          if (!routes.length) return;
+          let chosen = routes[0];
+          if (routeMode === 'shortest') {
+            chosen = routes.reduce((a, b) => a.summary.totalDistance <= b.summary.totalDistance ? a : b);
+          }
+          updateRouteStats(chosen.summary.totalDistance, chosen.summary.totalTime);
+          if (chosen.instructions && chosen.instructions.length) {
+            renderDirections(chosen.instructions);
+          } else {
+            renderDirections([{ text: 'Follow the highlighted route', distance: chosen.summary.totalDistance, type: 'Straight', road: 'Main road' }]);
+          }
+        });
+
+        routingControl.on('routingerror', function (e) {
+          console.warn('OSRM routing failed:', e && e.error);
+          if (routingControl) { map.removeControl(routingControl); routingControl = null; }
+          showStraightLineFallback(startLatLng, destLatLng, straightKm, 'service', destName);
+          showToast('Routing failed — showing a direct line instead.', 'warn');
+        });
+      }
+
+      /* ============================================================
+         IP GEOLOCATION
+         ============================================================ */
+      async function traceUserByIP() {
+        try {
+          const res = await fetch('https://ipapi.co/json/');
+          if (!res.ok) throw new Error('ipapi.co HTTP ' + res.status);
+          const data = await res.json();
+
+          if (!data || data.error) throw new Error(data.reason || 'IP lookup error');
+
+          const lat = parseFloat(data.latitude);
+          const lng = parseFloat(data.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('IP lookup returned no coordinates');
+
+          userLocation = { lat, lng };
+          userCountryCode = (data.country_code || '').toLowerCase();
+          userCountryName = data.country_name || '';
+
+          currentMarker.setLatLng([lat, lng]);
+          map.setView([lat, lng], 12, { animate: true });
+          currentMarker.openPopup();
+
+          ipStatusEl.className = 'ip-status ok';
+          ipStatusEl.innerHTML = `<i class="fas fa-check-circle"></i> Detected: <strong>${escapeHtml(userCountryName || userCountryCode)}</strong>` + (userCountryCode ? ` — searches will prioritise <strong>${userCountryCode.toUpperCase()}</strong> landmarks.` : ' — global search enabled.');
+
+          searchInput.placeholder = userCountryName ? `Search landmarks in ${userCountryName}…` : 'Search for an address or landmark…';
+          return true;
+        } catch (err) {
+          console.warn('IP geolocation failed:', err);
+          userLocation = { ...CONFIG.fallbackLocation };
+          userCountryCode = ''; userCountryName = '';
+          currentMarker.setLatLng([userLocation.lat, userLocation.lng]);
+
+          ipStatusEl.className = 'ip-status fail';
+          ipStatusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Could not detect your location from IP. Using a default location — searches are global.';
+          return false;
+        }
+      }
+
+      /* ============================================================
+         GEOCODING (Nominatim)
+         ============================================================ */
+      async function geocode(query) {
+        const params = new URLSearchParams({ format: 'json', q: query, limit: '1', 'accept-language': 'en' });
+        if (userCountryCode) params.set('countrycodes', userCountryCode);
+
+        const res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('Geocoder HTTP ' + res.status);
+
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) return null;
+
+        const hit = data[0];
+        const lat = parseFloat(hit.lat);
+        const lng = parseFloat(hit.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+        return { lat, lng, name: (hit.display_name || query).split(',')[0].trim() || query };
+      }
+
+      async function searchAndRoute(rawQuery) {
+        const query = (rawQuery || '').trim();
+        if (!query) { showToast('Enter a destination first.', 'warn'); return; }
+
+        const start = userLocation || CONFIG.fallbackLocation;
+        const originalHTML = searchBtn.innerHTML;
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> <span>Searching</span>';
+
+        try {
+          const place = await geocode(query);
+          if (!place) {
+            showToast(`No match found for “${query}”` + (userCountryName ? ` in ${userCountryName}` : '') + '. Try a more specific name.', 'warn');
+            return;
+          }
+          searchInput.value = place.name;
+          calculateRoute(start, place, place.name);
+        } catch (err) {
+          console.error('Geocoding error:', err);
+          showToast('Could not search for that location. Check your connection.', 'warn');
+        } finally {
+          searchBtn.disabled = false;
+          searchBtn.innerHTML = originalHTML;
+        }
+      }
+
+      /* ============================================================
+         UI CONTROLS
+         ============================================================ */
+      function setRouteMode(mode) {
+        if (routeMode === mode) return;
+        routeMode = mode;
+        prefFastest.classList.toggle('active', mode === 'fastest');
+        prefShortest.classList.toggle('active', mode === 'shortest');
+        const query = searchInput.value.trim();
+        if (query) searchAndRoute(query);
+      }
+
+      prefFastest.addEventListener('click', () => setRouteMode('fastest'));
+      prefShortest.addEventListener('click', () => setRouteMode('shortest'));
+
+      toggleTollsEl.addEventListener('click', function () {
+        avoidTolls = !avoidTolls;
+        toggleTollsEl.classList.toggle('on', avoidTolls);
+        showToast(avoidTolls ? 'Avoiding tolls – recalculating…' : 'Tolls allowed – recalculating…');
+        const query = searchInput.value.trim();
+        if (query) searchAndRoute(query);
+      });
+
+      document.getElementById('btnCenter').addEventListener('click', function () {
+        if (userLocation) {
+          map.setView([userLocation.lat, userLocation.lng], 15, { animate: true });
+          showToast('Centred on your IP-based location');
+        } else {
+          showToast('Location not yet detected.', 'warn');
+        }
+      });
+
+      document.getElementById('btnNorth').addEventListener('click', function () {
+        if (typeof map.setBearing === 'function') map.setBearing(0);
+        else map.panTo(map.getCenter());
+        showToast('Map oriented north');
+      });
+
+      let darkMode = false;
+      document.getElementById('btnTheme').addEventListener('click', function () {
+        darkMode = !darkMode;
+        appEl.classList.toggle('dark', darkMode);
+        setTileLayer(darkMode ? 'dark' : 'light');
+        this.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        showToast(darkMode ? 'Dark mode on' : 'Light mode on');
+      });
+
+      let is3D = false;
+      const mapEl = document.getElementById('map');
+      document.getElementById('btn3D').addEventListener('click', function () {
+        is3D = !is3D;
+        mapEl.classList.toggle('tilted', is3D);
+        this.classList.toggle('active', is3D);
+        showToast(is3D ? '3D perspective on' : '3D perspective off');
+      });
+
+      searchBtn.addEventListener('click', () => searchAndRoute(searchInput.value));
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); searchAndRoute(searchInput.value); }
+      });
+
+      window.addEventListener('resize', () => map.invalidateSize());
+
+      /* ============================================================
+         BOOTSTRAP
+         ============================================================ */
+      (async function bootstrap() {
+        const ok = await traceUserByIP();
+        if (ok) {
+          showToast(`Location detected: ${userCountryName || userCountryCode}. Searches prioritise local landmarks.`);
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>
