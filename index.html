@@ -23,7 +23,9 @@
     .logo span { color: #2d2f33; }
     .app.dark .logo span { color: #e1e5ec; }
 
-    .search-box { flex: 1; display: flex; gap: 8px; max-width: 550px; margin-left: 8px; }
+    /* Search Box & Autocomplete */
+    .search-container { flex: 1; max-width: 550px; margin-left: 8px; position: relative; }
+    .search-box { display: flex; gap: 8px; }
     .search-box input { flex: 1; padding: 12px 18px; border-radius: 40px; border: 1px solid #e1e5ec; background: #f9fafc; font-size: 0.95rem; outline: none; transition: 0.2s; }
     .app.dark .search-box input { background: #2c3038; border-color: #3a3f4a; color: #e1e5ec; }
     .search-box input:focus { border-color: #1a73e8; background: #fff; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1); }
@@ -32,12 +34,25 @@
     .search-box button:hover:not(:disabled) { background: #0d5bbf; }
     .search-box button:disabled { opacity: 0.65; cursor: progress; }
 
+    /* Autocomplete Dropdown */
+    .autocomplete-list { position: absolute; top: calc(100% + 5px); left: 0; width: calc(100% - 110px); background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 2000; max-height: 300px; overflow-y: auto; display: none; border: 1px solid #eef1f5; }
+    .app.dark .autocomplete-list { background: #2c3038; border-color: #3a3f4a; }
+    .autocomplete-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f3f7; display: flex; flex-direction: column; }
+    .app.dark .autocomplete-item { border-bottom-color: #3a3f4a; }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: #f8faff; }
+    .app.dark .autocomplete-item:hover { background: #3a3f4a; }
+    .autocomplete-title { font-weight: 600; font-size: 0.9rem; color: #1e2a3a; }
+    .app.dark .autocomplete-title { color: #e1e5ec; }
+    .autocomplete-sub { font-size: 0.75rem; color: #7a8798; margin-top: 4px; line-height: 1.3; }
+    .app.dark .autocomplete-sub { color: #a0aab8; }
+
     /* ---------- MAP ---------- */
     .main-panel { flex: 1; display: flex; position: relative; overflow: hidden; }
-    #map { flex: 1; height: 100%; width: 100%; z-index: 1; background: #d9e2ec; transition: transform 0.4s ease, filter 0.3s ease; transform-origin: center center; }
+    #map { flex: 1; height: 100%; width: 100%; z-index: 1; background: #d9e2ec; transition: transform 0.4s ease; transform-origin: center center; }
     #map.tilted { transform: perspective(1200px) rotateX(28deg) scale(0.92); filter: drop-shadow(0 20px 30px rgba(0,0,0,0.25)); border-radius: 12px; }
 
-    /* ---------- SIDEBAR (MOVED TO LEFT) ---------- */
+    /* ---------- SIDEBAR (LEFT) ---------- */
     .sidebar { width: 360px; background: #fff; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.06); display: flex; flex-direction: column; z-index: 2; overflow-y: auto; border-right: 1px solid #eef1f5; transition: background 0.2s, border-color 0.2s; order: -1; }
     .app.dark .sidebar { background: #1e2126; border-right-color: #2c3038; }
 
@@ -49,16 +64,6 @@
     .route-stats { display: flex; gap: 16px; margin-top: 8px; font-size: 0.9rem; color: #5f6c80; flex-wrap: wrap; }
     .app.dark .route-stats { color: #a0aab8; }
     .route-stats i { margin-right: 4px; color: #1a73e8; }
-
-    /* IP status banner */
-    .ip-status { margin: 12px 20px 4px; padding: 10px 12px; background: #e8f0fe; border: 1px solid #c6dafc; border-radius: 10px; font-size: 0.78rem; color: #1a5fb4; line-height: 1.45; display: flex; align-items: center; gap: 8px; }
-    .ip-status .spinner { width: 14px; height: 14px; border: 2px solid #c6dafc; border-top-color: #1a73e8; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .ip-status.ok { background: #e6f4ea; border-color: #b7e1cd; color: #137333; }
-    .ip-status.fail { background: #fce8e6; border-color: #f5c6c2; color: #c5221f; }
-    .app.dark .ip-status.ok { background: #1e3a2a; border-color: #2d5a3a; color: #7ee2a8; }
-    .app.dark .ip-status.fail { background: #3a1e1e; border-color: #5a2d2d; color: #f28b82; }
-    .app.dark .ip-status:not(.ok):not(.fail) { background: #1e2a3a; border-color: #2c3f5a; color: #8ab4f8; }
 
     /* Route preferences */
     .route-prefs { display: flex; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #eef1f5; align-items: center; flex-wrap: wrap; }
@@ -95,20 +100,9 @@
     .step-detail { font-size: 0.8rem; color: #7a8798; margin-top: 4px; display: flex; gap: 12px; }
     .app.dark .step-detail { color: #8896a8; }
 
-    /* ---------- BOTTOM BAR ---------- */
-    .bottom-bar { background: #fff; border-top: 1px solid #eef1f5; padding: 10px 20px; display: flex; align-items: center; gap: 18px; font-size: 0.85rem; z-index: 1000; box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.02); flex-wrap: wrap; transition: background 0.2s, border-color 0.2s; }
-    .app.dark .bottom-bar { background: #1e2126; border-top-color: #2c3038; }
-    .alert-badge { display: flex; align-items: center; gap: 8px; background: #fff2e5; color: #c7511f; padding: 6px 14px; border-radius: 30px; font-weight: 500; border: 1px solid #ffd9b3; }
-    .app.dark .alert-badge { background: #3a2e1f; border-color: #5a4a2f; color: #ffb27a; }
-    .traffic-indicator { display: flex; align-items: center; gap: 10px; margin-left: auto; color: #2d3b4e; }
-    .app.dark .traffic-indicator { color: #a0aab8; }
-    .traffic-dot { width: 10px; height: 10px; border-radius: 50%; background: #34a853; box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.15); }
-
-    /* ---------- TOAST ---------- */
-    .toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1e2a3a; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 500; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); opacity: 0; pointer-events: none; transition: 0.25s; z-index: 5000; max-width: 90vw; }
-    .app.dark .toast { background: #2c3038; color: #e1e5ec; }
+    /* ---------- TOAST (ERRORS ONLY) ---------- */
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #b3261e; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 500; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); opacity: 0; pointer-events: none; transition: 0.25s; z-index: 5000; max-width: 90vw; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .toast.warn { background: #b3261e; }
 
     /* ---------- LEAFLET OVERRIDES ---------- */
     .leaflet-routing-container { display: none !important; }
@@ -128,34 +122,34 @@
     .app.dark .map-tool-btn:hover { background: #3a3f4a; }
     .map-tool-btn.active { background: #1a73e8; color: #fff; }
 
-    .leaflet-control-rotate-toggle { background: #fff !important; border-radius: 10px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.12) !important; border: none !important; }
-    .app.dark .leaflet-control-rotate-toggle { background: #2c3038 !important; }
-
     @media (max-width: 700px) {
       .sidebar { display: none; }
       .search-box button span { display: none; }
       .top-bar { flex-wrap: wrap; gap: 8px; }
       .logo { font-size: 1.2rem; }
       .map-tools { top: 8px; right: 8px; }
+      .autocomplete-list { width: 100%; }
     }
   </style>
 </head>
 <body>
   <div class="app" id="app">
-    <!-- TOP BAR -->
     <div class="top-bar">
       <div class="logo">
         <i class="fas fa-map-marked-alt" style="font-size: 1.6rem;"></i>
         <span>NaviGo</span>
       </div>
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search for an address or landmark…" />
-        <button id="searchBtn"><i class="fas fa-route"></i> <span>Route</span></button>
+      
+      <div class="search-container">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Search for an address or landmark…" autocomplete="off" />
+          <button id="searchBtn"><i class="fas fa-route"></i> <span>Route</span></button>
+        </div>
+        <div class="autocomplete-list" id="autocompleteList"></div>
       </div>
     </div>
 
     <div class="main-panel">
-      <!-- SIDEBAR (Now on the left due to CSS flex order) -->
       <div class="sidebar">
         <div class="route-header">
           <h2><i class="fas fa-directions" style="color: #1a73e8;"></i> Turn‑by‑turn</h2>
@@ -163,12 +157,6 @@
             <span><i class="fas fa-road"></i> <span id="routeDistance">—</span></span>
             <span><i class="fas fa-clock"></i> <span id="routeTime">—</span></span>
           </div>
-        </div>
-
-        <!-- IP geolocation status -->
-        <div class="ip-status" id="ipStatus">
-          <div class="spinner"></div>
-          <span>Detecting your location from IP…</span>
         </div>
 
         <div class="route-prefs">
@@ -187,16 +175,14 @@
             <div class="step-icon"><i class="fas fa-map-pin"></i></div>
             <div class="step-content">
               <div class="step-instruction">Search for a destination to begin</div>
-              <div class="step-detail">Landmarks in your country are prioritised.</div>
+              <div class="step-detail">Enter a destination in the search bar above.</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- MAP -->
       <div id="map"></div>
 
-      <!-- Floating Map Tools -->
       <div class="map-tools">
         <button class="map-tool-btn" id="btnCenter" title="Center to my location">
           <i class="fas fa-crosshairs"></i>
@@ -212,45 +198,38 @@
         </button>
       </div>
     </div>
-
-    <!-- BOTTOM BAR -->
-    <div class="bottom-bar">
-      <div class="alert-badge"><i class="fas fa-exclamation-triangle"></i> Police reported ahead</div>
-      <div class="alert-badge" style="background: #e6f0fe; color: #1a5fb4; border-color: #b8d4fe;">
-        <i class="fas fa-cloud-sun"></i> 18°C · Clear
-      </div>
-      <div class="traffic-indicator"><span class="traffic-dot"></span> Light traffic</div>
-    </div>
   </div>
 
   <div id="toast" class="toast"></div>
 
-  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@tomickigrzegorz/leaflet-rotate/dist/leaflet-rotate.umd.min.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+
+  <script src="config.js"></script>
 
   <script>
     (function () {
       'use strict';
 
-      /* ============================================================
-         CONFIG
-         ============================================================ */
+      const MAPBOX_TOKEN = (window.APP_CONFIG && window.APP_CONFIG.mapboxToken) || '';
+
       const CONFIG = {
         osrmServiceUrl: 'https://router.project-osrm.org/route/v1',
         maxRouteDistanceKm: 1500,
-        geocodeCountryCodes: '',
-        fallbackLocation: { lat: 40.785091, lng: -73.968285 }, // Default fallback if IP fails
+        fallbackLocation: { lat: 40.785091, lng: -73.968285 }, 
 
-        // Reliable CARTO tiles (bypasses OSM localhost blocking)
         lightTiles: {
-          url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`,
+          attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         },
         darkTiles: {
-          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+          url: `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`,
+          attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        },
+        fallbackTiles: {
+          url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> France'
         }
       };
 
@@ -270,18 +249,34 @@
       });
 
       let activeTileLayer = null;
+      let isUsingFallback = false;
+
       function setTileLayer(theme) {
         if (activeTileLayer) map.removeLayer(activeTileLayer);
+        
+        if (isUsingFallback) {
+          activeTileLayer = L.tileLayer(CONFIG.fallbackTiles.url, {
+            attribution: CONFIG.fallbackTiles.attribution, maxZoom: 19
+          }).addTo(map);
+          return;
+        }
+
         const cfg = theme === 'dark' ? CONFIG.darkTiles : CONFIG.lightTiles;
         activeTileLayer = L.tileLayer(cfg.url, {
-          attribution: cfg.attribution,
-          maxZoom: 19,
-          crossOrigin: true
+          attribution: cfg.attribution, maxZoom: 19, crossOrigin: true
         }).addTo(map);
+
+        activeTileLayer.on('tileerror', function(e) {
+          if (!isUsingFallback) {
+            console.warn("Mapbox tile failed to load (Check API token). Switching to free fallback map...");
+            isUsingFallback = true;
+            setTileLayer(theme);
+            showErrorToast("Mapbox failed (check API key). Using free map.");
+          }
+        });
       }
       setTileLayer('light');
 
-      // Starting Marker
       const currentMarker = L.marker([CONFIG.fallbackLocation.lat, CONFIG.fallbackLocation.lng], {
         icon: L.divIcon({
           className: 'current-location-icon',
@@ -289,7 +284,7 @@
           iconSize: [16, 16],
           iconAnchor: [8, 8]
         })
-      }).addTo(map).bindPopup('Approximate location (from IP)');
+      }).addTo(map).bindPopup('Your Location');
 
       /* ============================================================
          DOM HELPERS
@@ -304,14 +299,14 @@
       const toggleTollsEl = document.getElementById('toggleTolls');
       const prefFastest = document.getElementById('prefFastest');
       const prefShortest = document.getElementById('prefShortest');
-      const ipStatusEl = document.getElementById('ipStatus');
+      const autocompleteList = document.getElementById('autocompleteList');
 
       let toastTimer = null;
-      function showToast(message, kind) {
+      function showErrorToast(message) {
         toastEl.textContent = message;
-        toastEl.className = 'toast show' + (kind === 'warn' ? ' warn' : '');
+        toastEl.className = 'toast show';
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 4500);
+        toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 5000);
       }
 
       function updateRouteStats(distanceMeters, timeSeconds) {
@@ -332,10 +327,10 @@
       let destMarker = null;
       let routeMode = 'fastest';
       let avoidTolls = false;
-
+      
       let userLocation = null;
-      let userCountryCode = '';
-      let userCountryName = '';
+      let userCountryCode = ''; // Extracted from IP
+      let selectedDestination = null; 
 
       function clearRouteArtifacts() {
         if (routingControl) { map.removeControl(routingControl); routingControl = null; }
@@ -427,13 +422,6 @@
               <div class="step-instruction">Turn‑by‑turn unavailable</div>
               <div class="step-detail">${reasonText}</div>
             </div>
-          </div>
-          <div class="direction-step">
-            <div class="step-icon"><i class="fas fa-flag-checkered"></i></div>
-            <div class="step-content">
-              <div class="step-instruction">${escapeHtml(destName)}</div>
-              <div class="step-detail"><i class="fas fa-map-pin"></i> Destination</div>
-            </div>
           </div>`;
       }
 
@@ -441,6 +429,11 @@
          ROUTING
          ============================================================ */
       function showStraightLineFallback(startLatLng, destLatLng, km, reason, destName) {
+        if (straightKm > 1000) {
+          renderRouteError('too-far', destName);
+          return;
+        }
+        
         fallbackLine = L.polyline([startLatLng, destLatLng], {
           color: '#ea4335', weight: 5, opacity: 0.75, dashArray: '8 10'
         }).addTo(map);
@@ -464,12 +457,12 @@
             iconSize: [20, 20],
             iconAnchor: [10, 20]
           })
-        }).addTo(map).bindPopup(`<b>${escapeHtml(destName)}</b><br>Destination`).openPopup();
+        }).addTo(map).bindPopup(`<b>${escapeHtml(destName)}</b><br>Destination`);
 
         const straightKm = haversineKm(start, dest);
         if (straightKm > CONFIG.maxRouteDistanceKm) {
           showStraightLineFallback(startLatLng, destLatLng, straightKm, 'too-far', destName);
-          showToast(`Destination is ~${Math.round(straightKm)} km away — beyond the demo server's range.`, 'warn');
+          showErrorToast(`Destination is ~${Math.round(straightKm)} km away — beyond demo range.`);
           return;
         }
 
@@ -487,17 +480,29 @@
             addWaypoints: false, extendToWaypoints: true, missingRouteTolerance: 0
           },
           show: false, addWaypoints: false, fitSelectedRoutes: true, routeWhileDragging: false,
-          showAlternatives: routeMode === 'shortest', autoRoute: true
+          showAlternatives: true, 
+          autoRoute: true
         }).addTo(map);
 
         routingControl.on('routesfound', function (e) {
           const routes = e.routes || [];
           if (!routes.length) return;
+          
           let chosen = routes[0];
+          
           if (routeMode === 'shortest') {
-            chosen = routes.reduce((a, b) => a.summary.totalDistance <= b.summary.totalDistance ? a : b);
+            chosen = routes.reduce((prev, curr) => 
+              prev.summary.totalDistance <= curr.summary.totalDistance ? prev : curr
+            );
+          } else { 
+            chosen = routes.reduce((prev, curr) => 
+              prev.summary.totalTime <= curr.summary.totalTime ? prev : curr
+            );
           }
+
           updateRouteStats(chosen.summary.totalDistance, chosen.summary.totalTime);
+          map.fitBounds(L.latLngBounds(chosen.coordinates), { padding: [50, 50] });
+
           if (chosen.instructions && chosen.instructions.length) {
             renderDirections(chosen.instructions);
           } else {
@@ -509,91 +514,236 @@
           console.warn('OSRM routing failed:', e && e.error);
           if (routingControl) { map.removeControl(routingControl); routingControl = null; }
           showStraightLineFallback(startLatLng, destLatLng, straightKm, 'service', destName);
-          showToast('Routing failed — showing a direct line instead.', 'warn');
+          showErrorToast('Routing failed — showing a direct line instead.');
         });
       }
 
       /* ============================================================
-         IP GEOLOCATION
+         LOCATION: GPS + IP FALLBACK (With Country Extraction)
          ============================================================ */
-      async function traceUserByIP() {
+      async function initializeLocation() {
+        let ipData = null;
+        
         try {
           const res = await fetch('https://ipapi.co/json/');
-          if (!res.ok) throw new Error('ipapi.co HTTP ' + res.status);
-          const data = await res.json();
+          if (res.ok) {
+            ipData = await res.json();
+            if (ipData && ipData.country_code) {
+              userCountryCode = ipData.country_code.toLowerCase(); // e.g., 'my'
+            }
+          }
+        } catch (e) { console.warn("IP lookup failed", e); }
 
-          if (!data || data.error) throw new Error(data.reason || 'IP lookup error');
-
-          const lat = parseFloat(data.latitude);
-          const lng = parseFloat(data.longitude);
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('IP lookup returned no coordinates');
-
-          userLocation = { lat, lng };
-          userCountryCode = (data.country_code || '').toLowerCase();
-          userCountryName = data.country_name || '';
-
-          currentMarker.setLatLng([lat, lng]);
-          map.setView([lat, lng], 12, { animate: true });
-          currentMarker.openPopup();
-
-          ipStatusEl.className = 'ip-status ok';
-          ipStatusEl.innerHTML = `<i class="fas fa-check-circle"></i> Detected: <strong>${escapeHtml(userCountryName || userCountryCode)}</strong>` + (userCountryCode ? ` — searches will prioritise <strong>${userCountryCode.toUpperCase()}</strong> landmarks.` : ' — global search enabled.');
-
-          searchInput.placeholder = userCountryName ? `Search landmarks in ${userCountryName}…` : 'Search for an address or landmark…';
-          return true;
-        } catch (err) {
-          console.warn('IP geolocation failed:', err);
-          userLocation = { ...CONFIG.fallbackLocation };
-          userCountryCode = ''; userCountryName = '';
-          currentMarker.setLatLng([userLocation.lat, userLocation.lng]);
-
-          ipStatusEl.className = 'ip-status fail';
-          ipStatusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Could not detect your location from IP. Using a default location — searches are global.';
-          return false;
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
+              userLocation = { lat, lng };
+              updateMapAndUI(lat, lng, 'GPS');
+            },
+            (error) => {
+              console.warn("GPS Denied/Failed:", error.message);
+              if (ipData && ipData.latitude && ipData.longitude) {
+                const lat = parseFloat(ipData.latitude);
+                const lng = parseFloat(ipData.longitude);
+                userLocation = { lat, lng };
+                updateMapAndUI(lat, lng, 'IP');
+              } else {
+                userLocation = { ...CONFIG.fallbackLocation };
+                updateMapAndUI(userLocation.lat, userLocation.lng, 'Default');
+              }
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          );
+        } else {
+          if (ipData && ipData.latitude && ipData.longitude) {
+            const lat = parseFloat(ipData.latitude);
+            const lng = parseFloat(ipData.longitude);
+            userLocation = { lat, lng };
+            updateMapAndUI(lat, lng, 'IP');
+          } else {
+            userLocation = { ...CONFIG.fallbackLocation };
+            updateMapAndUI(userLocation.lat, userLocation.lng, 'Default');
+          }
         }
       }
 
-      /* ============================================================
-         GEOCODING (Nominatim)
-         ============================================================ */
-      async function geocode(query) {
-        const params = new URLSearchParams({ format: 'json', q: query, limit: '1', 'accept-language': 'en' });
-        if (userCountryCode) params.set('countrycodes', userCountryCode);
-
-        const res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error('Geocoder HTTP ' + res.status);
-
-        const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) return null;
-
-        const hit = data[0];
-        const lat = parseFloat(hit.lat);
-        const lng = parseFloat(hit.lon);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-        return { lat, lng, name: (hit.display_name || query).split(',')[0].trim() || query };
+      function updateMapAndUI(lat, lng, source) {
+        currentMarker.setLatLng([lat, lng]);
+        map.setView([lat, lng], source === 'GPS' ? 16 : 12, { animate: true });
+        currentMarker.openPopup();
       }
 
-      async function searchAndRoute(rawQuery) {
-        const query = (rawQuery || '').trim();
-        if (!query) { showToast('Enter a destination first.', 'warn'); return; }
+      /* ============================================================
+         GEOCODING & AUTOCOMPLETE (Country Filtered & Address Parsed)
+         ============================================================ */
+      async function fetchAutocomplete(query) {
+        if (!query || query.length < 3) {
+          autocompleteList.style.display = 'none';
+          return;
+        }
 
-        const start = userLocation || CONFIG.fallbackLocation;
+        let results = [];
+        
+        // 1. Mapbox Autocomplete
+        if (MAPBOX_TOKEN && MAPBOX_TOKEN !== 'pk.YOUR_MAPBOX_ACCESS_TOKEN_HERE') {
+          try {
+            let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=5`;
+            if (userLocation) url += `&proximity=${userLocation.lng},${userLocation.lat}`;
+            if (userCountryCode) url += `&country=${userCountryCode}`; // IP Prioritization
+            
+            const res = await fetch(url);
+            if (res.ok) {
+              const data = await res.json();
+              results = data.features.map(f => {
+                // Extract detailed address parts
+                let title = f.text;
+                if (f.address) title = `${f.address} ${f.text}`; // e.g. "Block 5 KFC"
+                let subtitle = f.place_name.replace(title, '').replace(/^,\s*/, ''); // e.g. "Jasin, Melaka, 77000, Malaysia"
+                
+                return {
+                  name: title,
+                  address: subtitle,
+                  lat: f.geometry.coordinates[1],
+                  lng: f.geometry.coordinates[0]
+                };
+              });
+            }
+          } catch (e) { console.warn("Mapbox autocomplete failed", e); }
+        }
+
+        // 2. Photon Fallback
+        if (results.length === 0) {
+          try {
+            const prox = userLocation ? `&lat=${userLocation.lat}&lon=${userLocation.lng}` : '';
+            const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5${prox}`);
+            if (res.ok) {
+              const data = await res.json();
+              results = data.features.map(f => {
+                let title = f.properties.name || f.properties.street || query;
+                // Combine available address parts
+                let parts = [
+                  f.properties.housenumber,
+                  f.properties.street,
+                  f.properties.district,
+                  f.properties.city,
+                  f.properties.state,
+                  f.properties.postcode,
+                  f.properties.country
+                ].filter(Boolean);
+                
+                return {
+                  name: title,
+                  address: parts.join(', '),
+                  lat: f.geometry.coordinates[1],
+                  lng: f.geometry.coordinates[0]
+                };
+              });
+            }
+          } catch (e) { console.warn("Photon autocomplete failed", e); }
+        }
+
+        renderAutocomplete(results);
+      }
+
+      function renderAutocomplete(results) {
+        if (results.length === 0) {
+          autocompleteList.style.display = 'none';
+          return;
+        }
+
+        autocompleteList.innerHTML = results.map((r, i) => `
+          <div class="autocomplete-item" data-index="${i}">
+            <div class="autocomplete-title"><i class="fas fa-map-marker-alt" style="color:#1a73e8;margin-right:6px;"></i>${escapeHtml(r.name)}</div>
+            <div class="autocomplete-sub">${escapeHtml(r.address)}</div>
+          </div>
+        `).join('');
+
+        autocompleteList.style.display = 'block';
+
+        const items = autocompleteList.querySelectorAll('.autocomplete-item');
+        items.forEach(item => {
+          item.addEventListener('click', () => {
+            const idx = item.getAttribute('data-index');
+            const selected = results[idx];
+            
+            searchInput.value = selected.name;
+            selectedDestination = selected;
+            autocompleteList.style.display = 'none';
+            
+            calculateRoute(userLocation || CONFIG.fallbackLocation, selectedDestination, selectedDestination.name);
+          });
+        });
+      }
+
+      let debounceTimer;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+        debounceTimer = setTimeout(() => fetchAutocomplete(query), 350);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+          autocompleteList.style.display = 'none';
+        }
+      });
+
+      async function searchAndRoute() {
+        const query = searchInput.value.trim();
+        if (!query) { showErrorToast('Enter a destination first.'); return; }
+
+        if (selectedDestination && query === selectedDestination.name) {
+          calculateRoute(userLocation || CONFIG.fallbackLocation, selectedDestination, selectedDestination.name);
+          autocompleteList.style.display = 'none';
+          return;
+        }
+
         const originalHTML = searchBtn.innerHTML;
         searchBtn.disabled = true;
-        searchBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> <span>Searching</span>';
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i>';
 
         try {
-          const place = await geocode(query);
+          let place = null;
+          if (MAPBOX_TOKEN && MAPBOX_TOKEN !== 'pk.YOUR_MAPBOX_ACCESS_TOKEN_HERE') {
+            let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
+            if (userLocation) url += `&proximity=${userLocation.lng},${userLocation.lat}`;
+            if (userCountryCode) url += `&country=${userCountryCode}`;
+            
+            const res = await fetch(url);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.features && data.features.length > 0) {
+                const f = data.features[0];
+                place = { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], name: f.text };
+              }
+            }
+          }
+
           if (!place) {
-            showToast(`No match found for “${query}”` + (userCountryName ? ` in ${userCountryName}` : '') + '. Try a more specific name.', 'warn');
+            const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.features && data.features.length > 0) {
+                place = { lat: data.features[0].geometry.coordinates[1], lng: data.features[0].geometry.coordinates[0], name: data.features[0].properties.name || query };
+              }
+            }
+          }
+
+          if (!place) {
+            showErrorToast(`No match found for “${query}”. Try a different search.`);
             return;
           }
+          
+          selectedDestination = place;
           searchInput.value = place.name;
-          calculateRoute(start, place, place.name);
+          calculateRoute(userLocation || CONFIG.fallbackLocation, selectedDestination, selectedDestination.name);
+          autocompleteList.style.display = 'none';
+
         } catch (err) {
           console.error('Geocoding error:', err);
-          showToast('Could not search for that location. Check your connection.', 'warn');
+          showErrorToast('Could not search for that location. Check your connection.');
         } finally {
           searchBtn.disabled = false;
           searchBtn.innerHTML = originalHTML;
@@ -608,8 +758,10 @@
         routeMode = mode;
         prefFastest.classList.toggle('active', mode === 'fastest');
         prefShortest.classList.toggle('active', mode === 'shortest');
-        const query = searchInput.value.trim();
-        if (query) searchAndRoute(query);
+        
+        if (selectedDestination) {
+          calculateRoute(userLocation || CONFIG.fallbackLocation, selectedDestination, selectedDestination.name);
+        }
       }
 
       prefFastest.addEventListener('click', () => setRouteMode('fastest'));
@@ -618,24 +770,17 @@
       toggleTollsEl.addEventListener('click', function () {
         avoidTolls = !avoidTolls;
         toggleTollsEl.classList.toggle('on', avoidTolls);
-        showToast(avoidTolls ? 'Avoiding tolls – recalculating…' : 'Tolls allowed – recalculating…');
-        const query = searchInput.value.trim();
-        if (query) searchAndRoute(query);
+        if (selectedDestination) {
+          calculateRoute(userLocation || CONFIG.fallbackLocation, selectedDestination, selectedDestination.name);
+        }
       });
 
       document.getElementById('btnCenter').addEventListener('click', function () {
-        if (userLocation) {
-          map.setView([userLocation.lat, userLocation.lng], 15, { animate: true });
-          showToast('Centred on your IP-based location');
-        } else {
-          showToast('Location not yet detected.', 'warn');
-        }
+        if (userLocation) map.setView([userLocation.lat, userLocation.lng], 16, { animate: true });
       });
 
       document.getElementById('btnNorth').addEventListener('click', function () {
         if (typeof map.setBearing === 'function') map.setBearing(0);
-        else map.panTo(map.getCenter());
-        showToast('Map oriented north');
       });
 
       let darkMode = false;
@@ -644,7 +789,6 @@
         appEl.classList.toggle('dark', darkMode);
         setTileLayer(darkMode ? 'dark' : 'light');
         this.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        showToast(darkMode ? 'Dark mode on' : 'Light mode on');
       });
 
       let is3D = false;
@@ -653,25 +797,16 @@
         is3D = !is3D;
         mapEl.classList.toggle('tilted', is3D);
         this.classList.toggle('active', is3D);
-        showToast(is3D ? '3D perspective on' : '3D perspective off');
       });
 
-      searchBtn.addEventListener('click', () => searchAndRoute(searchInput.value));
+      searchBtn.addEventListener('click', searchAndRoute);
       searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); searchAndRoute(searchInput.value); }
+        if (e.key === 'Enter') { e.preventDefault(); searchAndRoute(); }
       });
 
       window.addEventListener('resize', () => map.invalidateSize());
 
-      /* ============================================================
-         BOOTSTRAP
-         ============================================================ */
-      (async function bootstrap() {
-        const ok = await traceUserByIP();
-        if (ok) {
-          showToast(`Location detected: ${userCountryName || userCountryCode}. Searches prioritise local landmarks.`);
-        }
-      })();
+      initializeLocation();
     })();
   </script>
 </body>
